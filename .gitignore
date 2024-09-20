@@ -5,6 +5,7 @@ pyvenv.cfg
 
 .DS_Store
 **/.DS_Store
+mongo-data/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

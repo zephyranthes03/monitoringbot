@@ -20,7 +20,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
     volumes:
-      - mongo-data:./mongo-data  # Docker 볼륨을 MongoDB의 데이터 디렉토리에 마운트합니다.
+      - ./mongo-data:/data/db  # Docker 볼륨을 MongoDB의 데이터 디렉토리에 마운트합니다.
 
   redis:
     image: "redis:alpine"  # Use the Redis image from Docker Hub
