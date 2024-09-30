@@ -1,11 +1,13 @@
-import httpx
 import asyncio
+import httpx
+import redis.asyncio as aioredis
 import os
+
 from socket_test import service_check, alive_check
-from database.database import Database, insert_service_data, remove_service_data, get_services, get_serfvices_by_chat_id
+from database.database import Database
 from model.service_model import ServiceModel, ServiceDataModel
-from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes, CallbackContext
+from telegram import ReplyKeyboardMarkup, Update
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, CallbackContext
 
 # 텔레그램 봇 API 토큰과 채팅 ID 설정
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -76,6 +78,7 @@ async def stop_bot(update: Update, context: CallbackContext):
 
 # 파라미터를 처리하는 명령어 함수
 async def add_service(update: Update, context: CallbackContext) -> None:
+    database = Database()
     # 명령어의 파라미터(인수) 가져오기
     chat_id = update.message.chat_id
     print(context.args)
@@ -92,24 +95,25 @@ async def add_service(update: Update, context: CallbackContext) -> None:
 
     if len(context.args) >= 2:
         service_model = ServiceModel(host=ip, port=port, time=time)
-        insert_service_data(chat_id, service_model)
+        database.insert_service_data(chat_id, service_model)
 
 
 # 파라미터를 처리하는 명령어 함수
 async def remove_service(update: Update, context: CallbackContext) -> None:
+    database = Database()
     # 명령어의 파라미터(인수) 가져오기
     chat_id = update.message.chat_id
     print(context.args)
     if len(context.args) == 2:
         #name = ' '.join(context.args)  # 여러 파라미터를 하나의 문자열로 연결
         ip, port = context.args[0], context.args[1]
-        await update.message.reply_text(f"Removed, {name}!")
+        await update.message.reply_text(f"Removed, {ip} / {port}!")
     else:
         await update.message.reply_text("Please provide IP and port after the command, e.g., /remove IP[Domain] [port].")
 
     if len(context.args) >= 2:
         service_model = ServiceModel(host=ip, port=port, time=INTERVAL)
-        remove_service_data(chat_id, service_model)
+        database.remove_service_data(chat_id, service_model)
 
 
 
@@ -144,17 +148,19 @@ def database_example():
 
 def main():
     # Get the singleton instance of the AsyncDatabase class
-    database = Database()
+    # database = Database()
 
-    # Initialize connections asynchronously
-    await database.initialize_connections()
 
-    # Use the shared MongoDB collection and Redis client
-    collection = database.get_collection
-    redis_client = database.get_redis
+    # # Initialize connections asynchronously
+    # database.initialize_connections()
+
+    # # Use the shared MongoDB collection and Redis client
+    # collection = database.get_collection
+    # redis_client = database.get_redis
 
 
     # 애플리케이션 빌더를 사용해 봇 생성
+    # print(TELEGRAM_BOT_TOKEN, flush=True)
     application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
     # /start 명령어 처리기 등록
@@ -171,13 +177,12 @@ def main():
 
     # 봇 시작
     application.run_polling()
-
+    
     asyncio.run(event_handler())
 
 
 
 # 메인 로직
 if __name__ == "__main__":
-    # 비동기 이벤트 핸들러 호출
     main()
 
