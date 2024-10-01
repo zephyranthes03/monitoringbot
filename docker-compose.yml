@@ -10,8 +10,8 @@ services:
       - redis  # Wait for the redis service to be ready before starting
       - mongodb
     environment:
-      - "TELEGRAM_BOT_KEY={TELEGRAM_BOT_KEY}"
-      - "TELEGRAM_CHAT_IP={TELEGRAM_CHAT_ID}"
+      - TELEGRAM_BOT_TOKEN
+      - TELEGRAM_CHAT_ID
 
   mongodb:
     image: mongo
