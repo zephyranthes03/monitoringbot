@@ -87,7 +87,7 @@ class Database:
                                                     port=service_info.port, 
                                                     time=service_info.time, 
                                                     status='init', 
-                                                    last_check_time=datetime.now() + timedelta(minutes=service_info.time)
+                                                    last_check_time=datetime.now() + datetime.timedelta(minutes=service_info.time)
                                                     )
             service_info_text = await redis_client.get(chat_id)
             service_info_json = json.loads(service_info_text)
@@ -138,7 +138,7 @@ class Database:
 
 
 
-    async def get_service_data(self, chat_id:str) -> dict():
+    async def get_service_data(self, chat_id:str) -> dict:
         # Get the singleton instance of the AsyncDatabase class
 
         # Initialize connections asynchronously
@@ -151,6 +151,7 @@ class Database:
         # Example operation: Set a value in Redis
         if redis_client:
             service_info_text = await redis_client.get(chat_id)
+            print(type(service_info_text),flush=True)
             service_info_json = json.loads(service_info_text)
             if service_info_json:
                 return service_info_json
@@ -163,7 +164,7 @@ class Database:
             print("Sample document delete into MongoDB.")
 
 
-    async def get_serfvices_by_chat_id(self, chat_id:str) -> dict():
+    async def get_services_by_chat_id(self, chat_id:str) -> dict:
         # Get the singleton instance of the AsyncDatabase class
 
         # Initialize connections asynchronously
@@ -176,9 +177,13 @@ class Database:
         # Example operation: Set a value in Redis
         if redis_client:
             service_info_text = await redis_client.get(chat_id)
-            service_info_json = json.loads(service_info_text)
-            if service_info_json:
+            if service_info_text:
+                print(service_info_text, flush=True)
+                print(type(service_info_text), flush=True)
+                service_info_json = json.loads(service_info_text)
                 return service_info_json
+            else:
+                return None
 
         # Example operation: Insert a sample document into MongoDB
         if collection:

@@ -2,6 +2,8 @@ import asyncio
 import httpx
 import redis.asyncio as aioredis
 import os
+import threading
+
 
 from socket_test import service_check, alive_check
 from database.database import Database
@@ -31,10 +33,9 @@ async def send_telegram_message(message):
         except httpx.HTTPStatusError as e:
             print(f"Failed to send message: {e}")
 
-async def event_handler():
-    """
-    이벤트가 발생할 때 호출되는 비동기 함수
-    """
+
+
+async def greet_every_interval():
     event_occurred = True  # 실제 이벤트 조건에 따라 설정
 
     # 예시 이벤트 로직
@@ -44,8 +45,9 @@ async def event_handler():
             await send_telegram_message("An event has occurred!")
             event_occurred = False
         else:
-            print("Else routine")
+            await send_telegram_message("An event has not occurred!")
         await asyncio.sleep(INTERVAL)
+
 
 async def start(update: Update, context: CallbackContext) -> None:
     """
@@ -75,6 +77,18 @@ async def stop_bot(update: Update, context: CallbackContext):
     global stop_flag
     stop_flag = True  # 플래그를 True로 설정하여 루프를 종료
     await context.bot.send_message(chat_id=update.effective_chat.id, text="봇을 중지합니다.")
+
+# 파라미터를 처리하는 명령어 함수
+async def list_service(update: Update, context: CallbackContext) -> None:
+    database = Database()
+    # 명령어의 파라미터(인수) 가져오기
+    chat_id = update.message.chat_id
+    print(context.args)
+    time = INTERVAL
+
+    list_dict = await database.get_services_by_chat_id(chat_id)
+    await update.message.reply_text(f"{str(list_dict)}")
+
 
 # 파라미터를 처리하는 명령어 함수
 async def add_service(update: Update, context: CallbackContext) -> None:
@@ -168,6 +182,7 @@ def main():
     application.add_handler(CommandHandler('chat_id', chat_id))
     application.add_handler(CommandHandler('add', add_service))  # /stop 명령어 처리기 추가
     application.add_handler(CommandHandler('remove', remove_service))  # /stop 명령어 처리기 추가
+    application.add_handler(CommandHandler('list', list_service))  # /stop 명령어 처리기 추가
 
     # 모든 텍스트 메시지에 대한 핸들러 등록
     # application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat_id))
@@ -175,12 +190,18 @@ def main():
     # 봇 시작
     # 봇과 비동기 함수 동시 실행
 
-    # 봇 시작
+    # Create coroutine
+    coro = greet_every_interval()
+
+    # Create and get an adequate asyncio event loop
+    # Application.instance().shell.enable_gui('asyncio')
+    loop = asyncio.get_event_loop()
+
+    loop.create_task(coro)
+
     application.run_polling()
+
     
-    asyncio.run(event_handler())
-
-
 
 # 메인 로직
 if __name__ == "__main__":
