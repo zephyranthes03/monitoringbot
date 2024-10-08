@@ -1,10 +1,13 @@
 import asyncio
 import redis.asyncio as aioredis
 import json
+import os
+import ast
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from motor.motor_asyncio import AsyncIOMotorClient  # Asynchronous MongoDB client
 from model.service_model import ServiceModel, ServiceDataModel
+
 
 class Database:
     """Singleton class to manage MongoDB and Redis connections asynchronously."""
@@ -20,10 +23,21 @@ class Database:
     async def initialize_connections(self):
         """Initialize MongoDB and Redis connections asynchronously."""
         # MongoDB connection
+
+        username = "root"
+        username = os.getenv("MONGO_INITDB_ROOT_USERNAME","root")
+        password = os.getenv("MONGO_INITDB_ROOT_PASSWORD","example")
+        print(password, flush=True)
+        mongo_host = "mongodb"  # hostname (can be localhost or a container name)
+        mongo_port = 27017
+        database_name = "database_scheduler"
+        collection_name = "collection_scheduler"
+
+        mongo_uri = f"mongodb://{username}:{password}@{mongo_host}:{mongo_port}/?authSource=admin"
+
         try:
-            self.mongo_client = AsyncIOMotorClient('mongodb://mongodb:27017/')
-            self.db = self.mongo_client['database_scheduler']
-            collection_name = 'collection_scheduler'
+            self.mongo_client = AsyncIOMotorClient(mongo_uri)
+            self.db = self.mongo_client[database_name]
 
             # Check if the collection exists; if not, create it
             existing_collections = await self.db.list_collection_names()
@@ -47,6 +61,9 @@ class Database:
             print("Connected to Redis.")
         except Exception as e:
             print(f"Error connecting to Redis: {e}")
+        finally:
+            if self.redis_client is None:
+                print("Redis 클라이언트가 None으로 설정되었습니다.")
 
     @property
     def get_db(self):
@@ -73,7 +90,7 @@ class Database:
 
         service_flag = None
         # Example operation: Insert a sample document into MongoDB
-        if collection:
+        if collection is not None:
             filter = {'chat_id':chat_id, 'host': service_info.host, 'port':service_info.port}
             value = {'chat_id':chat_id, 'host': service_info.host, 'port':service_info.port, 'time':service_info.time }
 
@@ -81,20 +98,28 @@ class Database:
             print("Sample document inserted into MongoDB.")
 
         # Example operation: Set a value in Redis
-        if redis_client:
+        if redis_client is not None:
             service_info_key = f"{service_info.host}:{service_info.port}"
             service_data_model_info = ServiceDataModel(host=service_info.host, 
                                                     port=service_info.port, 
                                                     time=service_info.time, 
                                                     status='init', 
-                                                    last_check_time=datetime.now() + datetime.timedelta(minutes=service_info.time)
+                                                    last_check_time=datetime.now() + timedelta(minutes=service_info.time)
                                                     )
             service_info_text = await redis_client.get(chat_id)
-            service_info_json = json.loads(service_info_text)
-            service_info_json[service_info_key] = service_data_model_info
-            service_info_text = json.dumps(service_info_json)
+            service_info_json = dict()
+            if service_info_text:
+                service_info_json = json.loads(service_info_text)
+            service_info_json[service_info_key] = {"host":service_info.host, 
+                                                    "port":service_info.port, 
+                                                    "time":service_info.time, 
+                                                    "status":'init', 
+                                                    "last_check_time":service_data_model_info.last_check_time.strftime("%Y-%m-%d %H:%M:%S")
+                                                  }
+            service_info_text =json.dumps(service_info_json)
             await redis_client.set(chat_id, service_info_text)
             print("Sample key-value pair set in Redis.")
+
 
         # # Example operation: Fetch and print all documents from MongoDB collection
         # if collection:
@@ -120,13 +145,13 @@ class Database:
 
 
         # Example operation: Insert a sample document into MongoDB
-        if collection:
+        if collection is not None:
             await collection.delete_one({'chat_id': chat_id, 'host': service_info.host, 
                                         'port':service_info.port})
             print("Sample document delete into MongoDB.")
 
         # Example operation: Set a value in Redis
-        if redis_client:
+        if redis_client is not None:
             add_service_info = service_info.dict()
             service_info_key = f"{service_info.host}:{service_info.port}"
             service_info_text = await redis_client.get(chat_id)
@@ -149,7 +174,7 @@ class Database:
         redis_client = self.get_redis
 
         # Example operation: Set a value in Redis
-        if redis_client:
+        if redis_client is not None:
             service_info_text = await redis_client.get(chat_id)
             print(type(service_info_text),flush=True)
             service_info_json = json.loads(service_info_text)
@@ -157,7 +182,7 @@ class Database:
                 return service_info_json
 
         # Example operation: Insert a sample document into MongoDB
-        if collection:
+        if collection is not None:
             result = await collection.find_one({'chat_id': chat_id})
             if result:
                 return result
@@ -175,7 +200,7 @@ class Database:
         redis_client = self.get_redis
 
         # Example operation: Set a value in Redis
-        if redis_client:
+        if redis_client is not None:
             service_info_text = await redis_client.get(chat_id)
             if service_info_text:
                 print(service_info_text, flush=True)
@@ -186,7 +211,7 @@ class Database:
                 return None
 
         # Example operation: Insert a sample document into MongoDB
-        if collection:
+        if collection is not None:
             result = await collection.find_one({'chat_id': chat_id})
             if result:
                 return result

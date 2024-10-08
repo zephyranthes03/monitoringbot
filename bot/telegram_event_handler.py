@@ -4,6 +4,7 @@ import redis.asyncio as aioredis
 import os
 import threading
 
+import tracemalloc
 
 from socket_test import service_check, alive_check
 from database.database import Database
@@ -80,8 +81,9 @@ async def stop_bot(update: Update, context: CallbackContext):
 
 # 파라미터를 처리하는 명령어 함수
 async def list_service(update: Update, context: CallbackContext) -> None:
-    database = Database()
     # 명령어의 파라미터(인수) 가져오기
+    database = Database()
+
     chat_id = update.message.chat_id
     print(context.args)
     time = INTERVAL
@@ -109,13 +111,14 @@ async def add_service(update: Update, context: CallbackContext) -> None:
 
     if len(context.args) >= 2:
         service_model = ServiceModel(host=ip, port=port, time=time)
-        database.insert_service_data(chat_id, service_model)
+        await database.insert_service_data(chat_id, service_model)
 
 
 # 파라미터를 처리하는 명령어 함수
 async def remove_service(update: Update, context: CallbackContext) -> None:
-    database = Database()
     # 명령어의 파라미터(인수) 가져오기
+    database = Database()
+
     chat_id = update.message.chat_id
     print(context.args)
     if len(context.args) == 2:
@@ -127,7 +130,7 @@ async def remove_service(update: Update, context: CallbackContext) -> None:
 
     if len(context.args) >= 2:
         service_model = ServiceModel(host=ip, port=port, time=INTERVAL)
-        database.remove_service_data(chat_id, service_model)
+        await database.remove_service_data(chat_id, service_model)
 
 
 
@@ -161,8 +164,11 @@ def database_example():
 
 
 def main():
+
+    tracemalloc.start()
+
     # Get the singleton instance of the AsyncDatabase class
-    # database = Database()
+    database = Database()
 
 
     # # Initialize connections asynchronously
@@ -190,16 +196,18 @@ def main():
     # 봇 시작
     # 봇과 비동기 함수 동시 실행
 
-    # Create coroutine
-    coro = greet_every_interval()
+    # # Create coroutine
+    # coro = greet_every_interval()
 
-    # Create and get an adequate asyncio event loop
-    # Application.instance().shell.enable_gui('asyncio')
-    loop = asyncio.get_event_loop()
+    # # Create and get an adequate asyncio event loop
+    # # Application.instance().shell.enable_gui('asyncio')
+    # loop = asyncio.get_event_loop()
 
-    loop.create_task(coro)
+    # loop.create_task(coro)
 
     application.run_polling()
+
+    tracemalloc.stop()
 
     
 
