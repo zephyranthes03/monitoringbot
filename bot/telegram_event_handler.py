@@ -104,13 +104,13 @@ async def add_service(update: Update, context: CallbackContext) -> None:
         ip, port = context.args[0], context.args[1]
         await update.message.reply_text(f"Added, {ip}, {port} ")
     elif len(context.args) > 2:
-        ip, port, time = context.args[0], context.args[1], context.args[2]
-        await update.message.reply_text(f"Added IP, Port, Time : {ip}, {port}, {time}")
+        ip, port, alias = context.args[0], context.args[1], context.args[2]
+        await update.message.reply_text(f"Added IP, Port, Alias : {ip}, {port}, {alias}")
     else:
         await update.message.reply_text("Please provide IP and port after the command, e.g., /add IP[Domain] [port].")
 
     if len(context.args) >= 2:
-        service_model = ServiceModel(host=ip, port=port, time=time)
+        service_model = ServiceModel(host=ip, port=port, time=time, alias=alias)
         await database.insert_service_data(chat_id, service_model)
 
 
@@ -129,7 +129,7 @@ async def remove_service(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("Please provide IP and port after the command, e.g., /remove IP[Domain] [port].")
 
     if len(context.args) >= 2:
-        service_model = ServiceModel(host=ip, port=port, time=INTERVAL)
+        service_model = ServiceModel(host=ip, port=port)
         await database.remove_service_data(chat_id, service_model)
 
 

@@ -4,6 +4,7 @@ from pydantic import BaseModel
 class ServiceModel(BaseModel):
     host: str
     port: int
+    alias: str
     time: int
 
 class ServiceDataModel(ServiceModel):

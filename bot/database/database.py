@@ -92,7 +92,7 @@ class Database:
         # Example operation: Insert a sample document into MongoDB
         if collection is not None:
             filter = {'chat_id':chat_id, 'host': service_info.host, 'port':service_info.port}
-            value = {'chat_id':chat_id, 'host': service_info.host, 'port':service_info.port, 'time':service_info.time }
+            value = {'chat_id':chat_id, 'host': service_info.host, 'port':service_info.port, 'time':service_info.time, 'alias':service_info.alias }
 
             service_flag = await collection.replace_one(filter, value, True)
             print("Sample document inserted into MongoDB.")
@@ -103,6 +103,7 @@ class Database:
             service_data_model_info = ServiceDataModel(host=service_info.host, 
                                                     port=service_info.port, 
                                                     time=service_info.time, 
+                                                    alias=service_info.alias, 
                                                     status='init', 
                                                     last_check_time=datetime.now() + timedelta(minutes=service_info.time)
                                                     )
@@ -111,7 +112,8 @@ class Database:
             if service_info_text:
                 service_info_json = json.loads(service_info_text)
             service_info_json[service_info_key] = {"host":service_info.host, 
-                                                    "port":service_info.port, 
+                                                    "port":service_info.port,
+                                                    "alias":service_info.alias,
                                                     "time":service_info.time, 
                                                     "status":'init', 
                                                     "last_check_time":service_data_model_info.last_check_time.strftime("%Y-%m-%d %H:%M:%S")
