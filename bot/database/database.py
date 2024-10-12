@@ -81,8 +81,9 @@ class Database:
     async def insert_service_data(self, chat_id:str, service_info:ServiceModel):
         # Get the singleton instance of the AsyncDatabase class
 
-        # Initialize connections asynchronously
-        await self.initialize_connections()
+        if self.get_collection and self.get_redis:
+            # Initialize connections asynchronously
+            await self.initialize_connections()
 
         # Use the shared MongoDB collection and Redis client
         collection = self.get_collection
@@ -94,18 +95,16 @@ class Database:
             filter = {'chat_id':chat_id, 'host': service_info.host, 'port':service_info.port}
             value = {'chat_id':chat_id, 'host': service_info.host, 'port':service_info.port, 'time':service_info.time, 'alias':service_info.alias }
 
-            service_flag = await collection.replace_one(filter, value, True)
+            service_flag = await collection.replace_one(filter, value, upsert=True)
             print("Sample document inserted into MongoDB.")
 
         # Example operation: Set a value in Redis
         if redis_client is not None:
             service_info_key = f"{service_info.host}:{service_info.port}"
-            service_data_model_info = ServiceDataModel(host=service_info.host, 
+            service_data_model_info = ServiceDataModel(chat_id=chat_id,
+                                                    host=service_info.host, 
                                                     port=service_info.port, 
-                                                    time=service_info.time, 
                                                     alias=service_info.alias, 
-                                                    status='init', 
-                                                    last_check_time=datetime.now() + timedelta(minutes=service_info.time)
                                                     )
             service_info_text = await redis_client.get(chat_id)
             service_info_json = dict()
@@ -138,8 +137,9 @@ class Database:
     async def remove_service_data(self, chat_id:str, service_info:ServiceModel):
         # Get the singleton instance of the AsyncDatabase class
 
-        # Initialize connections asynchronously
-        await self.initialize_connections()
+        if self.get_collection and self.get_redis:
+            # Initialize connections asynchronously
+            await self.initialize_connections()
 
         # Use the shared MongoDB collection and Redis client
         collection = self.get_collection
@@ -168,8 +168,9 @@ class Database:
     async def get_service_data(self, chat_id:str) -> dict:
         # Get the singleton instance of the AsyncDatabase class
 
-        # Initialize connections asynchronously
-        await self.initialize_connections()
+        if self.get_collection and self.get_redis:
+            # Initialize connections asynchronously
+            await self.initialize_connections()
 
         # Use the shared MongoDB collection and Redis client
         collection = self.get_collection
@@ -184,18 +185,18 @@ class Database:
                 return service_info_json
 
         # Example operation: Insert a sample document into MongoDB
-        if collection is not None:
+        elif collection is not None:
             result = await collection.find_one({'chat_id': chat_id})
             if result:
                 return result
-            print("Sample document delete into MongoDB.")
 
 
     async def get_services_by_chat_id(self, chat_id:str) -> dict:
         # Get the singleton instance of the AsyncDatabase class
 
-        # Initialize connections asynchronously
-        await self.initialize_connections()
+        if self.get_collection and self.get_redis:
+            # Initialize connections asynchronously
+            await self.initialize_connections()
 
         # Use the shared MongoDB collection and Redis client
         collection = self.get_collection
@@ -213,10 +214,9 @@ class Database:
                 return None
 
         # Example operation: Insert a sample document into MongoDB
-        if collection is not None:
+        elif collection is not None:
             result = await collection.find_one({'chat_id': chat_id})
             if result:
                 return result
-            print("Sample document delete into MongoDB.")
 
 
