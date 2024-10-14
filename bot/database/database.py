@@ -78,6 +78,49 @@ class Database:
         return self.redis_client
 
 
+    async def inintialzie_service_data(self, service_info:ServiceModel):
+        # Get the singleton instance of the AsyncDatabase class
+
+        if self.get_collection and self.get_redis:
+            # Initialize connections asynchronously
+            await self.initialize_connections()
+
+        # Use the shared MongoDB collection and Redis client
+        collection = self.get_collection
+        redis_client = self.get_redis
+
+        # Example operation: Insert a sample document into MongoDB
+        if collection is not None:
+            results = await collection.find()
+            for result in results:
+                service_info_text = await redis_client.get(result.chat_id)
+                service_info_json = dict()
+                if service_info_text:
+                    service_info_json = json.loads(service_info_text)                
+                service_info_key = f"{result.host}:{result.port}"
+                service_info_json[service_info_key] = {"chat_id": result.chat_id, 
+                                                        "host":result.host, 
+                                                        "port":result.port,
+                                                        "alias":result.alias,
+                                                        "time":datetime.now(), 
+                                                        "status":'init', 
+                                                        "last_check_time":datetime.now()
+                                                    }
+                service_info_text =json.dumps(service_info_json)
+                await redis_client.set(result.chat_id, service_info_text)
+
+
+        # # Example operation: Fetch and print all documents from MongoDB collection
+        # if collection:
+        #     print("Documents in MongoDB collection:")
+        #     async for document in collection.find():
+        #         print(document)
+
+        # # Example operation: Get and print a value from Redis
+        # if redis_client:
+        #     value = await redis_client.get('sample_key')
+        #     print(f"Value for 'sample_key' in Redis: {value}")
+
     async def insert_service_data(self, chat_id:str, service_info:ServiceModel):
         # Get the singleton instance of the AsyncDatabase class
 

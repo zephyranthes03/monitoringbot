@@ -172,7 +172,8 @@ def main():
 
 
     # # Initialize connections asynchronously
-    # database.initialize_connections()
+    database.initialize_connections()
+    database.inintialzie_service_data()
 
     # # Use the shared MongoDB collection and Redis client
     # collection = database.get_collection
