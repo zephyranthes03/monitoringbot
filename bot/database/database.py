@@ -78,10 +78,10 @@ class Database:
         return self.redis_client
 
 
-    async def inintialzie_service_data(self, service_info:ServiceModel):
+    async def inintialzie_service_data(self):
         # Get the singleton instance of the AsyncDatabase class
 
-        if self.get_collection and self.get_redis:
+        if self.get_collection is None or self.get_redis is None:
             # Initialize connections asynchronously
             await self.initialize_connections()
 
@@ -91,23 +91,24 @@ class Database:
 
         # Example operation: Insert a sample document into MongoDB
         if collection is not None:
-            results = await collection.find()
-            for result in results:
-                service_info_text = await redis_client.get(result.chat_id)
+            results = collection.find()
+            async for result in results:
+                service_info_text = await redis_client.get(result['chat_id'])
                 service_info_json = dict()
                 if service_info_text:
                     service_info_json = json.loads(service_info_text)                
-                service_info_key = f"{result.host}:{result.port}"
-                service_info_json[service_info_key] = {"chat_id": result.chat_id, 
-                                                        "host":result.host, 
-                                                        "port":result.port,
-                                                        "alias":result.alias,
-                                                        "time":datetime.now(), 
+                service_info_key = f"{result['host']}:{result['port']}"
+                date_string = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                service_info_json[service_info_key] = {"chat_id": result['chat_id'], 
+                                                        "host":result['host'], 
+                                                        "port":result['port'],
+                                                        "alias":result['alias'],
+                                                        "time":date_string, 
                                                         "status":'init', 
-                                                        "last_check_time":datetime.now()
+                                                        "last_check_time":date_string
                                                     }
                 service_info_text =json.dumps(service_info_json)
-                await redis_client.set(result.chat_id, service_info_text)
+                await redis_client.set(result['chat_id'], service_info_text)
 
 
         # # Example operation: Fetch and print all documents from MongoDB collection
@@ -132,6 +133,8 @@ class Database:
         collection = self.get_collection
         redis_client = self.get_redis
 
+        date_string = datetime.now().strftime("%Y-%m-%d %H:%M:%S") + timedelta(seconds=service_info.time)
+        lastcheck_date_string = service_data_model_info.last_check_time.strftime("%Y-%m-%d %H:%M:%S")
         service_flag = None
         # Example operation: Insert a sample document into MongoDB
         if collection is not None:
@@ -156,9 +159,9 @@ class Database:
             service_info_json[service_info_key] = {"host":service_info.host, 
                                                     "port":service_info.port,
                                                     "alias":service_info.alias,
-                                                    "time":service_info.time, 
+                                                    "time":lastcheck_date_string, 
                                                     "status":'init', 
-                                                    "last_check_time":service_data_model_info.last_check_time.strftime("%Y-%m-%d %H:%M:%S")
+                                                    "last_check_time":lastcheck_date_string
                                                   }
             service_info_text =json.dumps(service_info_json)
             await redis_client.set(chat_id, service_info_text)

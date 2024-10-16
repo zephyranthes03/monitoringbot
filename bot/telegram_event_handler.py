@@ -37,6 +37,7 @@ async def send_telegram_message(message):
 
 
 async def greet_every_interval():
+
     event_occurred = True  # 실제 이벤트 조건에 따라 설정
 
     # 예시 이벤트 로직
@@ -49,7 +50,28 @@ async def greet_every_interval():
             await send_telegram_message("An event has not occurred!")
         await asyncio.sleep(INTERVAL)
 
+async def run_async_tasks():
+    """비동기 작업 실행"""
+    # 비동기 작업 시작 (greet_every_interval)
 
+
+    # Get the singleton instance of the AsyncDatabase class
+    database = Database()
+
+
+    # # Initialize connections asynchronously
+    await database.initialize_connections()
+    await database.inintialzie_service_data()
+
+    asyncio.create_task(greet_every_interval())
+
+    # 다른 비동기 작업도 추가 가능
+    # await asyncio.sleep(60)  # 예시로 60초 후 종료
+
+async def main_async(application):
+    # 비동기 작업 실행
+    await asyncio.create_task(run_async_tasks())
+    
 async def start(update: Update, context: CallbackContext) -> None:
     """
     /start 명령어를 처리하는 함수
@@ -167,14 +189,6 @@ def main():
 
     tracemalloc.start()
 
-    # Get the singleton instance of the AsyncDatabase class
-    database = Database()
-
-
-    # # Initialize connections asynchronously
-    database.initialize_connections()
-    database.inintialzie_service_data()
-
     # # Use the shared MongoDB collection and Redis client
     # collection = database.get_collection
     # redis_client = database.get_redis
@@ -197,14 +211,18 @@ def main():
     # 봇 시작
     # 봇과 비동기 함수 동시 실행
 
-    # # Create coroutine
-    # coro = greet_every_interval()
-
     # # Create and get an adequate asyncio event loop
     # # Application.instance().shell.enable_gui('asyncio')
     # loop = asyncio.get_event_loop()
 
-    # loop.create_task(coro)
+    # loop.create_task(run_async_tasks())
+
+    # 기본적으로 run_polling은 동기 메서드이므로, 별도의 쓰레드에서 실행
+    loop = asyncio.new_event_loop()  # 새 이벤트 루프 생성
+    asyncio.set_event_loop(loop)  # 새로운 이벤트 루프 설정
+
+    loop.create_task(main_async(application))  # 비동기 작업을 루프에 추가
+
 
     application.run_polling()
 
