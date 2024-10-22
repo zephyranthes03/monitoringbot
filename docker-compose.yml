@@ -10,7 +10,7 @@ services:
     volumes:
       - ./bot:/app
     depends_on:
-      - redis  # Wait for the redis service to be ready before starting
+      # - redis  # Wait for the redis service to be ready before starting
       - mongodb
     environment:
       - TELEGRAM_BOT_TOKEN
@@ -29,11 +29,11 @@ services:
     ports:
       - "27017:27017"
 
-  redis:
-    container_name: redis
-    image: "redis:alpine"  # Use the Redis image from Docker Hub
-    ports:
-      - "6379:6379"
+  # redis:
+  #   container_name: redis
+  #   image: "redis:alpine"  # Use the Redis image from Docker Hub
+  #   ports:
+  #     - "6379:6379"
   
 volumes:
   mongo-data:

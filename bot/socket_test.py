@@ -1,6 +1,6 @@
 import socket
 
-def service_check(host:str, port:int, type:str) -> bool:
+def service_check(host:str, port:int) -> bool:
     # if type == "http" or type == "https":
 
     # elif type=="tcp":
@@ -18,5 +18,5 @@ def alive_check(host:str="localhost", port:int=8080) -> bool:
 
 if __name__ == "__main__":
     print(alive_check())
-    print(service_check("127.0.0.1", 443, "http"))
-    print(service_check("proxy2.wynd.network", 4444, "tcp"))
+    print(service_check("127.0.0.1", 443))
+    print(service_check("proxy2.wynd.network", 4444))

@@ -5,7 +5,7 @@ import os
 import threading
 
 import tracemalloc
-
+from datetime import datetime, timedelta
 from socket_test import service_check, alive_check
 from database.database import Database
 from model.service_model import ServiceModel, ServiceDataModel
@@ -15,7 +15,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, fil
 # 텔레그램 봇 API 토큰과 채팅 ID 설정
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-INTERVAL = 5 # * 60
+INTERVAL = 5 * 60
 
 async def send_telegram_message(message):
     """
@@ -39,15 +39,36 @@ async def send_telegram_message(message):
 async def greet_every_interval():
 
     event_occurred = True  # 실제 이벤트 조건에 따라 설정
-
+    database = Database()
     # 예시 이벤트 로직
     while True:
         if event_occurred:
-            # 이벤트 발생 시 텔레그램으로 메시지 전송
-            await send_telegram_message("An event has occurred!")
-            event_occurred = False
-        else:
-            await send_telegram_message("An event has not occurred!")
+            print(type(datetime.now()),flush=True)
+            services_list = await database.get_services_by_time(datetime.now())
+            datetime_now = datetime.now()
+            datetime_now_isoformat = datetime_now.isoformat()
+            print(services_list,flush=True)
+            if services_list is not None:
+                for service_item in services_list:
+                    service_check(service_item['host'], service_item['port'])
+                    datetime_add_timedelta = datetime_now + timedelta(seconds=service_item['interval'])
+                    datetime_add_timedelta_isoformat = datetime_add_timedelta.isoformat()
+
+                    service_model = ServiceDataModel(chat_id=service_item['chat_id'],
+                                                host=service_item['host'], port=service_item['port'], 
+                                                alias=service_item['alias'],
+                                                next_check_time=datetime_now_isoformat,
+                                                last_check_time=datetime_add_timedelta_isoformat,
+                                                interval=service_item['interval'], status="init" )
+
+                    ### Redis Key?를 시간 tick으로 갈것인지 chat_id로 갈것인지... 고민중...
+                    await database.update_service_data(service_model.chat_id, service_model)
+
+        #     # 이벤트 발생 시 텔레그램으로 메시지 전송
+        #     await send_telegram_message("An event has occurred!")
+        #     event_occurred = False
+        # else:
+        #     await send_telegram_message("An event has not occurred!")
         await asyncio.sleep(INTERVAL)
 
 async def run_async_tasks():
@@ -71,7 +92,7 @@ async def run_async_tasks():
 async def main_async(application):
     # 비동기 작업 실행
     await asyncio.create_task(run_async_tasks())
-    
+
 async def start(update: Update, context: CallbackContext) -> None:
     """
     /start 명령어를 처리하는 함수
@@ -120,20 +141,27 @@ async def add_service(update: Update, context: CallbackContext) -> None:
     # 명령어의 파라미터(인수) 가져오기
     chat_id = update.message.chat_id
     print(context.args)
-    time = INTERVAL
+    interval = INTERVAL
     if len(context.args) == 2:
         #name = ' '.join(context.args)  # 여러 파라미터를 하나의 문자열로 연결
         ip, port = context.args[0], context.args[1]
-        await update.message.reply_text(f"Added, {ip}, {port} ")
-    elif len(context.args) > 2:
-        ip, port, alias = context.args[0], context.args[1], context.args[2]
-        await update.message.reply_text(f"Added IP, Port, Alias : {ip}, {port}, {alias}")
+        alias = f"{ip}/{port}"
+    elif len(context.args) == 4:
+        ip, port, interval, alias = context.args[0], context.args[1], context.args[2], context.args[3]
+    elif len(context.args) == 3:
+        alias = f"{ip}/{port}"
+        ip, port, interval = context.args[0], context.args[1], context.args[2]
     else:
-        await update.message.reply_text("Please provide IP and port after the command, e.g., /add IP[Domain] [port].")
+        await update.message.reply_text("Please provide IP and port after the command, e.g., /add IP [Domain] [port] [interval] (alias).")
 
-    if len(context.args) >= 2:
-        service_model = ServiceModel(host=ip, port=port, time=time, alias=alias)
+    ### check alias
+    if database.get_service_by_chat_id_and_alias(chat_id, alias) is None:
+        await update.message.reply_text(f"Added IP={ip}, Port={port}, Interval(default)={interval}, Alias={alias}")
+        service_model = ServiceModel(host=ip, port=port, interval=interval, alias=alias)
         await database.insert_service_data(chat_id, service_model)
+    else:
+        await update.message.reply_text(f"Alias({alias}) already exist. ")
+
 
 
 # 파라미터를 처리하는 명령어 함수
@@ -143,6 +171,10 @@ async def remove_service(update: Update, context: CallbackContext) -> None:
 
     chat_id = update.message.chat_id
     print(context.args)
+    if len(context.args) == 1:
+        #name = ' '.join(context.args)  # 여러 파라미터를 하나의 문자열로 연결
+        alias = context.args[0]
+        await update.message.reply_text(f"Removed, {alias}!")
     if len(context.args) == 2:
         #name = ' '.join(context.args)  # 여러 파라미터를 하나의 문자열로 연결
         ip, port = context.args[0], context.args[1]
@@ -151,7 +183,7 @@ async def remove_service(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("Please provide IP and port after the command, e.g., /remove IP[Domain] [port].")
 
     if len(context.args) >= 2:
-        service_model = ServiceModel(host=ip, port=port)
+        service_model = ServiceModel(host=ip, port=port, alias=alias)
         await database.remove_service_data(chat_id, service_model)
 
 
@@ -212,17 +244,12 @@ def main():
     # 봇과 비동기 함수 동시 실행
 
     # # Create and get an adequate asyncio event loop
-    # # Application.instance().shell.enable_gui('asyncio')
-    # loop = asyncio.get_event_loop()
-
-    # loop.create_task(run_async_tasks())
 
     # 기본적으로 run_polling은 동기 메서드이므로, 별도의 쓰레드에서 실행
     loop = asyncio.new_event_loop()  # 새 이벤트 루프 생성
     asyncio.set_event_loop(loop)  # 새로운 이벤트 루프 설정
 
     loop.create_task(main_async(application))  # 비동기 작업을 루프에 추가
-
 
     application.run_polling()
 
