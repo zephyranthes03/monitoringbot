@@ -148,8 +148,6 @@ class Database:
 
     async def update_service_data(self, chat_id:int, service_info:ServiceDataModel):
         # Get the singleton instance of the AsyncDatabase class
-        print(chat_id, flush=True)
-        print(type(chat_id), flush=True)
         if self.get_collection is None:
             # Initialize connections asynchronously
             await self.initialize_connections()
@@ -164,8 +162,6 @@ class Database:
             filter = {'chat_id':chat_id, 'host': service_info.host, 'port':service_info.port}
             
             service_info.chat_id = chat_id
-            print(service_info, flush=True)
-            print(service_info.model_dump(), flush=True)
 
             service_flag = await collection.replace_one(filter, service_info.model_dump(), upsert=True)
             print("Sample document inserted into MongoDB.")
@@ -222,7 +218,6 @@ class Database:
     # Update check Time routine 
     async def get_services_by_time(self, datetime_range:datetime) -> list:
         # Get the singleton instance of the AsyncDatabase class
-        print(datetime_range.isoformat(),flush=True)
         return_result = list()
         if self.get_collection is None:
             # Initialize connections asynchronously
@@ -230,12 +225,10 @@ class Database:
 
         # Use the shared MongoDB collection and Redis client
         collection = self.get_collection
-        print(collection,flush=True)
 
         # Example operation: Insert a sample document into MongoDB
         if collection is not None:
             results = collection.find({'next_check_time':{'$lt': datetime_range}})
-            # results = collection.find({})
             async for result in results:
                 return_result.append(result)
 
