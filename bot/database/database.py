@@ -230,6 +230,7 @@ class Database:
         if collection is not None:
             results = collection.find({'next_check_time':{'$lt': datetime_range}})
             async for result in results:
+                # print(result)
                 return_result.append(result)
 
         return return_result

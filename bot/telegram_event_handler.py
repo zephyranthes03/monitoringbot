@@ -43,11 +43,12 @@ async def greet_every_interval():
     # 예시 이벤트 로직
     while True:
         if event_occurred:
-            services_list = await database.get_services_by_time(datetime.now())
             datetime_now = datetime.now()
+            services_list = await database.get_services_by_time(datetime_now)
             datetime_now_isoformat = datetime_now.isoformat()
             if services_list is not None:
                 for service_item in services_list:
+                    # print(service_item['host'], service_item['port'], flush=True)
                     service_check(service_item['host'], service_item['port'])
                     datetime_add_timedelta = datetime_now + timedelta(seconds=service_item['interval'])
                     datetime_add_timedelta_isoformat = datetime_add_timedelta.isoformat()
