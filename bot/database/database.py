@@ -239,6 +239,7 @@ class Database:
 
     async def get_services_by_chat_id(self, chat_id:str) -> dict:
         # Get the singleton instance of the AsyncDatabase class
+        return_result = list()
 
         if self.get_collection is None:
             # Initialize connections asynchronously
@@ -248,10 +249,12 @@ class Database:
 
         # Example operation: Insert a sample document into MongoDB
         if collection is not None:
-            result = await collection.find_one({'chat_id': chat_id})
-            return result
-        else:
-            return None
+            results = collection.find({'chat_id': chat_id})
+            async for result in results:
+                # print(result)
+                return_result.append(result)
+                
+        return return_result
 
 
 

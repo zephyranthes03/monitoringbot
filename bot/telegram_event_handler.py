@@ -3,6 +3,7 @@ import httpx
 import redis.asyncio as aioredis
 import os
 import threading
+import prettytable as pt
 
 import tracemalloc
 from datetime import datetime, timedelta
@@ -10,7 +11,8 @@ from socket_test import service_check, alive_check
 from database.database import Database
 from model.service_model import ServiceModel, ServiceDataModel
 from telegram import ReplyKeyboardMarkup, Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, CallbackContext
+from telegram.constants import ParseMode
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, CallbackContext, Updater
 
 # 텔레그램 봇 API 토큰과 채팅 ID 설정
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -101,7 +103,7 @@ async def start(update: Update, context: CallbackContext) -> None:
     welcome_message = "안녕하세요! 텔레그램 봇에 오신 것을 환영합니다. 아래에서 옵션을 선택해 주세요:"
     
     # 선택 박스(키보드)
-    reply_keyboard = [ ['/start', '/stop'], ['/chat_id'], ['/add', 'remove']]
+    reply_keyboard = [ ['/start', '/stop'], ['/chat_id', '/list'], ['/add', '/remove']]
     markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
 
     # 인사말과 선택 박스를 전송
@@ -121,6 +123,19 @@ async def stop_bot(update: Update, context: CallbackContext):
     stop_flag = True  # 플래그를 True로 설정하여 루프를 종료
     await context.bot.send_message(chat_id=update.effective_chat.id, text="봇을 중지합니다.")
 
+
+def send_table(table_content:list, update: Updater, context: CallbackContext):
+    table = pt.PrettyTable(['Host', 'Port', 'Alias', 'Status', 'Interval'])
+    table.align['Host'] = 'c'
+    table.align['Port'] = 'r'
+    table.align['Alias'] = 'l'
+    table.align['Status'] = 'r'
+    table.align['Interval'] = 'l'
+
+    for table_dict in table_content:
+        table.add_row([table_dict['host'], f'{str(table_dict['port'])}', table_dict['alias'], table_dict['status'], f'{str(table_dict['interval'])}'])
+    return table
+
 # 파라미터를 처리하는 명령어 함수
 async def list_service(update: Update, context: CallbackContext) -> None:
     # 명령어의 파라미터(인수) 가져오기
@@ -130,8 +145,29 @@ async def list_service(update: Update, context: CallbackContext) -> None:
     print(context.args)
     time = INTERVAL
 
-    list_dict = await database.get_services_by_chat_id(chat_id)
-    await update.message.reply_text(f"{str(list_dict)}")
+    input_list = await database.get_services_by_chat_id(chat_id)
+    output_list = []
+    for source in input_list:
+        output = source 
+        output_list.append(output)
+
+    # 테이블 데이터 준비
+    data = [{
+        '_id': '6700803fd6420a197f46699a',
+        'chat_id': 54725131,
+        'host': 'jakljsf',
+        'port': 80,
+        'alias': 'test2',
+        'interval': 300,
+        'status': 'init',
+        'next_check_time': '2024-10-26 17:26:16',
+        'last_check_time': '2024-10-26 17:31:16'
+    }]
+
+    table_text = send_table(input_list, update, context)
+    await update.message.reply_text(f'<pre>{table_text}</pre>', parse_mode=ParseMode.HTML)
+
+    # await update.message.reply_text(f"{str(output_list)}")
 
 
 # 파라미터를 처리하는 명령어 함수
