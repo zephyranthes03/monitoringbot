@@ -151,19 +151,6 @@ async def list_service(update: Update, context: CallbackContext) -> None:
         output = source 
         output_list.append(output)
 
-    # 테이블 데이터 준비
-    data = [{
-        '_id': '6700803fd6420a197f46699a',
-        'chat_id': 54725131,
-        'host': 'jakljsf',
-        'port': 80,
-        'alias': 'test2',
-        'interval': 300,
-        'status': 'init',
-        'next_check_time': '2024-10-26 17:26:16',
-        'last_check_time': '2024-10-26 17:31:16'
-    }]
-
     table_text = send_table(input_list, update, context)
     await update.message.reply_text(f'<pre>{table_text}</pre>', parse_mode=ParseMode.HTML)
 
@@ -179,20 +166,20 @@ async def add_service(update: Update, context: CallbackContext) -> None:
     interval = INTERVAL
     if len(context.args) == 2:
         #name = ' '.join(context.args)  # 여러 파라미터를 하나의 문자열로 연결
-        ip, port = context.args[0], context.args[1]
-        alias = f"{ip}/{port}"
+        host, port = context.args[0], context.args[1]
+        alias = f"{host}/{port}"
     elif len(context.args) == 4:
-        ip, port, interval, alias = context.args[0], context.args[1], context.args[2], context.args[3]
+        host, port, interval, alias = context.args[0], context.args[1], context.args[2], context.args[3]
     elif len(context.args) == 3:
-        alias = f"{ip}/{port}"
-        ip, port, interval = context.args[0], context.args[1], context.args[2]
+        host, port, interval = context.args[0], context.args[1], context.args[2]
+        alias = f"{host}/{port}"
     else:
         await update.message.reply_text("Please provide IP and port after the command, e.g., /add IP [Domain] [port] [interval] (alias).")
 
     ### check alias
-    if database.get_service_by_chat_id_and_alias(chat_id, alias) is None:
-        await update.message.reply_text(f"Added IP={ip}, Port={port}, Interval(default)={interval}, Alias={alias}")
-        service_model = ServiceModel(host=ip, port=port, interval=interval, alias=alias)
+    if await database.get_service_by_chat_id_and_alias(chat_id, alias) is None:
+        await update.message.reply_text(f"Added IP={host}, Port={str(port)}, Interval(default=300)={interval}, Alias={alias}")
+        service_model = ServiceDataModel(chat_id=chat_id, host=host, port=int(port), interval=int(interval), alias=alias, status='init', next_check_time=datetime.now(), last_check_time=datetime.now())
         await database.insert_service_data(chat_id, service_model)
     else:
         await update.message.reply_text(f"Alias({alias}) already exist. ")

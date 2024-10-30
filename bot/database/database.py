@@ -113,6 +113,7 @@ class Database:
         if collection is not None:
             filter = {'chat_id':chat_id, 'host': service_info.host, 'port':service_info.port}
             value = {'chat_id':chat_id, 'host': service_info.host, 'port':service_info.port, 
+                     'status':service_info.status,
                      'last_check_time': datetime_now.isoformat(),
                      'next_check_time': datetime_add_timedelta.isoformat(),
                      'interval':service_info.interval, 'alias':service_info.alias }
@@ -253,14 +254,14 @@ class Database:
             async for result in results:
                 # print(result)
                 return_result.append(result)
-                
+
         return return_result
 
 
 
     async def get_service_by_chat_id_and_alias(self, chat_id:str, alias:str) -> dict:
         # Get the singleton instance of the AsyncDatabase class
-
+        result = None
         if self.get_collection is None:
             # Initialize connections asynchronously
             await self.initialize_connections()
@@ -270,7 +271,5 @@ class Database:
         # Example operation: Insert a sample document into MongoDB
         if collection is not None:
             result = await collection.find_one({'chat_id': chat_id, 'alias': alias})
-            return result
-        else:
-            return None
+        return result
 
