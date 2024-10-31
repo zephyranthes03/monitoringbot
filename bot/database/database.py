@@ -205,7 +205,6 @@ class Database:
         collection = self.get_collection
         # redis_client = self.get_redis
 
-
         # Example operation: Insert a sample document into MongoDB
         if collection is not None:
             if service_info.alias is None:

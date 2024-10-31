@@ -199,13 +199,13 @@ async def remove_service(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(f"Removed, {alias}!")
     if len(context.args) == 2:
         #name = ' '.join(context.args)  # 여러 파라미터를 하나의 문자열로 연결
-        ip, port = context.args[0], context.args[1]
-        await update.message.reply_text(f"Removed, {ip} / {port}!")
+        host, port = context.args[0], context.args[1]
+        await update.message.reply_text(f"Removed, {host} / {port}!")
     else:
-        await update.message.reply_text("Please provide IP and port after the command, e.g., /remove IP[Domain] [port].")
+        await update.message.reply_text("Please provide host and port after the command, e.g., /remove [Host] [port] or /remove [alias].")
 
     if len(context.args) >= 2:
-        service_model = ServiceModel(host=ip, port=port, alias=alias)
+        service_model = ServiceDataModel(host=host, port=port, alias=alias)
         await database.remove_service_data(chat_id, service_model)
 
 
@@ -235,8 +235,6 @@ def database_example():
         # Example: Get and print a value from Redis
         value = redis_client.get('sample_key')
         print(f"Value for 'sample_key' in Redis: {value.decode('utf-8')}")
-
-
 
 
 def main():
