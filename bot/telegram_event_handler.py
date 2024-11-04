@@ -10,13 +10,16 @@ from datetime import datetime, timedelta
 from socket_test import service_check, alive_check
 from database.database import Database
 from model.service_model import ServiceModel, ServiceDataModel
-from telegram import ReplyKeyboardMarkup, Update
+from telegram import ReplyKeyboardMarkup, Update, LabeledPrice
 from telegram.constants import ParseMode
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, CallbackContext, Updater
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, CallbackContext, Updater, PreCheckoutQueryHandler
+
 
 # 텔레그램 봇 API 토큰과 채팅 ID 설정
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+PAYMENT_PROVIDER_TOKEN = os.getenv('YOUR_PAYMENT_PROVIDER_TOKEN')  # 예: Stripe 토큰
+
 INTERVAL = 5 * 60
 
 async def send_telegram_message(message):
@@ -111,6 +114,39 @@ async def start(update: Update, context: CallbackContext) -> None:
 
     # await update.message.reply_text('안녕하세요! 이 봇은 당신의 chat_id를 응답합니다. 아무 메시지나 보내보세요!')
 
+async def donate(update: Update, context: CallbackContext) -> None:
+    title = "Support Our Bot!"
+    description = "If you enjoy using this bot, please consider making a donation."
+    # chat_id = update.message.chat_id
+    payload = "Custom-Payload"  # 기부 확인 시 사용할 고유 식별자
+    currency = "USD"  # 지원하는 통화 (예: USD, EUR)
+    prices = [LabeledPrice("Donation", 500)]  # 기부 금액 ($5.00)
+
+    # 결제 요청
+    await context.bot.send_invoice(
+        chat_id=update.message.chat_id,
+        title=title,
+        description=description,
+        payload = payload,  # 기부 확인 시 사용할 고유 식별자
+        provider_token=PAYMENT_PROVIDER_TOKEN,
+        currency=currency,
+        prices=prices,
+        start_parameter="donation"
+    )
+
+
+async def precheckout_callback(update: Update, context: CallbackContext) -> None:
+    query = update.pre_checkout_query
+    if query.invoice_payload != "Custom-Payload":
+        # 페이로드가 일치하지 않을 경우 결제 취소
+        query.answer(ok=False, error_message="Something went wrong. Please try again.")
+    else:
+        query.answer(ok=True)
+
+async def successful_payment_callback(update: Update, context: CallbackContext) -> None:
+    update.message.reply_text("Thank you for your donation!")
+
+
 async def chat_id(update: Update, context: CallbackContext) -> None:
     """
     사용자가 메시지를 보낼 때 chat_id를 응답하는 함수
@@ -155,6 +191,7 @@ async def list_service(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text(f'<pre>{table_text}</pre>', parse_mode=ParseMode.HTML)
 
     # await update.message.reply_text(f"{str(output_list)}")
+
 
 
 # 파라미터를 처리하는 명령어 함수
@@ -256,6 +293,12 @@ def main():
     application.add_handler(CommandHandler('add', add_service))  # /stop 명령어 처리기 추가
     application.add_handler(CommandHandler('remove', remove_service))  # /stop 명령어 처리기 추가
     application.add_handler(CommandHandler('list', list_service))  # /stop 명령어 처리기 추가
+    # application.add_handler(CommandHandler('donate', donate))
+
+
+    # 결제 핸들러 설정
+    application.add_handler(PreCheckoutQueryHandler(precheckout_callback))
+    application.add_handler(MessageHandler(filters.SuccessfulPayment, successful_payment_callback))
 
     # 모든 텍스트 메시지에 대한 핸들러 등록
     # application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat_id))
