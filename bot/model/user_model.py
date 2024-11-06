@@ -14,18 +14,10 @@ class PyObjectId(ObjectId):
             raise TypeError('ObjectId가 아닙니다.')
         return str(v)
     
-class ServiceModel(BaseModel):
+class UserModel(BaseModel):
     #id: PyObjectId
     chat_id: str
-    host: str
-    port: int
-    alias: str
-    interval: int
+    host_cnt: int
+    user_type: str
 
-    # class Config:
-    #     arbitrary_types_allowed = True  # 임의 타입 허용
 
-class ServiceDataModel(ServiceModel):
-    status: str
-    next_check_time: datetime
-    last_check_time: datetime

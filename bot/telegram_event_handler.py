@@ -85,8 +85,10 @@ async def run_async_tasks():
 
 
     # # Initialize connections asynchronously
-    await database.initialize_connections()
-    await database.inintialzie_service_data()
+    await database.initialize_service_connections()
+    await database.initialize_user_connections()
+
+    # await database.inintialzie_service_data()
 
     asyncio.create_task(greet_every_interval())
 
