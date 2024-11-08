@@ -42,7 +42,7 @@ class Database:
             # Check if the collection exists; if not, create it
             existing_collections = await self.db.list_collection_names()
             if collection_service_name not in existing_collections:
-                self.collection = self.db.create_collection(collection_service_name)
+                self.collection = await self.db.create_collection(collection_service_name)
                 print(f"Collection '{collection_service_name}' created.")
             else:
                 self.collection = self.db[collection_service_name]
@@ -73,7 +73,7 @@ class Database:
             # Check if the collection exists; if not, create it
             existing_collections = await self.db.list_collection_names()
             if collection_user_name not in existing_collections:
-                self.collection = self.db.create_collection(collection_user_name)
+                self.collection = await self.db.create_collection(collection_user_name)
                 print(f"Collection '{collection_user_name}' created.")
             else:
                 self.collection = self.db[collection_user_name]
